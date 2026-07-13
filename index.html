@@ -86,6 +86,7 @@ button.mini:hover{color:var(--ink);border-color:var(--ink);background:var(--shee
 button:disabled{opacity:.45;cursor:not-allowed}
 .chk{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
 .chk input{accent-color:var(--blue);width:14px;height:14px;cursor:pointer;margin:0}
+.ver{font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.06em;align-self:center}
 /* ── 본문 공통 ─────────────────────────────────────── */
 .body{padding:8px 20px 26px}
 /* 치수선 구분선 */
@@ -380,6 +381,7 @@ body.pdf-mode.no-story #panelStory{display:none!important}
     <button type="button" id="btnXlsx">엑셀로 저장</button>
     <label class="chk" for="chkStory"><input type="checkbox" id="chkStory" checked> 출력물에 층별 상세계산 포함</label>
     <div class="spacer"></div>
+    <span class="ver">v1.3 · 세로 출력</span>
     <button type="button" id="btnReset" class="ghost">예시로 초기화</button>
   </div>
 
@@ -572,7 +574,7 @@ body.pdf-mode.no-story #panelStory{display:none!important}
   </div>
 
   <footer class="foot">
-    <span>COLUMN AXIAL LOAD CALCULATION SHEET</span>
+    <span>COLUMN AXIAL LOAD CALCULATION SHEET · V1.3</span>
     <span>REF. KDS 41 10 15 · <b style="color:var(--ink);font-weight:600">made by KSN</b></span>
   </footer>
 </div>
@@ -1179,6 +1181,7 @@ $("#btnPrint").addEventListener("click", function(){
   buildPrintStories();
   document.body.classList.add("outmode");
   window.print();
+  setTimeout(function(){ document.body.classList.remove("outmode"); }, 800);   // afterprint 미발생 환경 대비
 });
 
 /* PDF로 저장: A4 세로 · 가능하면 1페이지, 넘치면 [일람표]와 [층별 상세(전 기둥)]를 페이지로 구분 */
