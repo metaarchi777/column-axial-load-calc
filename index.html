@@ -286,11 +286,11 @@ body.outmode #storyWarn,
 body.outmode #panelStory .stamp,
 body.outmode .cap-live{display:none!important}
 body.outmode #colTable,body.outmode #storyTable,body.outmode .ps-table{min-width:0;width:100%}
-body.outmode th{padding:3px 3px;font-size:8px;letter-spacing:0}
-body.outmode th .u{font-size:7px}
-body.outmode td{padding:2px 3px;font-size:8.5px}
-body.outmode td input.num,body.outmode td input.txt{font-size:8.5px;padding:0 2px}
-body.outmode tfoot td{padding:3px 3px;font-size:8.5px}
+body.outmode th{padding:3px 3px;font-size:8.5px;letter-spacing:0}
+body.outmode th .u{font-size:7.5px}
+body.outmode td{padding:2.5px 3px;font-size:9px}
+body.outmode td input.num,body.outmode td input.txt{font-size:9px;padding:0 2px}
+body.outmode tfoot td{padding:3px 3px;font-size:9px}
 body.outmode .gov{font-size:7px}
 body.outmode .panel{padding:6px 0 0}
 body.outmode .panel-cap{margin-bottom:6px}
@@ -301,7 +301,7 @@ body.outmode .dim span{font-size:9px;letter-spacing:.14em}
 body.outmode .cond-group h3{font-size:8.5px;padding:3px 8px;letter-spacing:.08em}
 body.outmode .cf{padding:5px 8px 6px}
 body.outmode .cf label{font-size:8.5px;margin-bottom:2px}
-body.outmode input.num{font-size:10px;padding:2px 5px}
+body.outmode input.num{font-size:10.5px;padding:2px 5px}
 body.outmode .cond-note{font-size:8px}
 body.outmode .tb-cell{padding:7px 10px 6px}
 body.outmode .tb-label{font-size:8px;letter-spacing:.1em}
@@ -381,7 +381,7 @@ body.pdf-mode.no-story #panelStory{display:none!important}
     <button type="button" id="btnXlsx">엑셀로 저장</button>
     <label class="chk" for="chkStory"><input type="checkbox" id="chkStory" checked> 출력물에 층별 상세계산 포함</label>
     <div class="spacer"></div>
-    <span class="ver">v1.3 · 세로 출력</span>
+    <span class="ver">v1.4 · 선명 출력</span>
     <button type="button" id="btnReset" class="ghost">예시로 초기화</button>
   </div>
 
@@ -574,7 +574,7 @@ body.pdf-mode.no-story #panelStory{display:none!important}
   </div>
 
   <footer class="foot">
-    <span>COLUMN AXIAL LOAD CALCULATION SHEET · V1.3</span>
+    <span>COLUMN AXIAL LOAD CALCULATION SHEET · V1.4</span>
     <span>REF. KDS 41 10 15 · <b style="color:var(--ink);font-weight:600">made by KSN</b></span>
   </footer>
 </div>
@@ -1202,8 +1202,26 @@ $("#btnPdf").addEventListener("click", async function(){
     await new Promise(function(r){ setTimeout(r, 80); });   // 레이아웃 반영 대기
     const sheet = $(".sheet");
     const canvas = await window.html2canvas(sheet, {
-      scale: 2, backgroundColor: "#FFFFFF",
-      scrollX: 0, scrollY: -window.scrollY, windowWidth: 860
+      scale: 3, backgroundColor: "#FFFFFF",
+      scrollX: 0, scrollY: -window.scrollY, windowWidth: 860,
+      onclone: function(cd){
+        /* html2canvas가 input 텍스트를 잘라 그리는 문제 회피:
+           캡처용 복제 문서에서 입력칸을 동일 서식의 일반 텍스트로 치환 */
+        const src = document.querySelectorAll(".sheet input");
+        const dst = cd.querySelectorAll(".sheet input");
+        dst.forEach(function(inp, i){
+          const o = src[i];
+          if(!o || o.type === "checkbox" || o.type === "radio") return;
+          const cs = window.getComputedStyle(o);
+          const d = cd.createElement("div");
+          d.textContent = o.value;
+          d.style.cssText = "box-sizing:border-box;width:100%;white-space:nowrap;overflow:visible;line-height:1.35;" +
+            "font-family:" + cs.fontFamily + ";font-size:" + cs.fontSize +
+            ";font-weight:" + cs.fontWeight + ";color:" + cs.color +
+            ";text-align:" + cs.textAlign + ";padding:" + cs.padding + ";";
+          inp.parentNode.replaceChild(d, inp);
+        });
+      }
     });
     const rect = sheet.getBoundingClientRect();
     const k = canvas.width / rect.width;
@@ -1251,7 +1269,7 @@ $("#btnPdf").addEventListener("click", async function(){
       slice.height = h;
       slice.getContext("2d").drawImage(canvas, 0, Math.round(rg[0]), canvas.width, h, 0, 0, canvas.width, h);
       if(p > 0) pdf.addPage();
-      pdf.addImage(slice.toDataURL("image/jpeg", 0.92), "JPEG", margin, margin, imgW, h * imgW / canvas.width);
+      pdf.addImage(slice.toDataURL("image/png"), "PNG", margin, margin, imgW, h * imgW / canvas.width);
     });
     pdf.save("기둥축력계산서_" + todayISO() + ".pdf");
   }catch(err){
