@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기둥 축력 계산서 — Column Axial Load Calculator</title>
+<meta name="description" content="분담면적과 층별 하중(DL·LL)으로 기둥 축력(사용하중 D+L, 계수하중 1.2D+1.6L)을 산정하는 예비설계용 도구">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF1F0;        /* 제도용지 바탕 */
+  --sheet:#FFFFFF;        /* 도면 시트 */
+  --ink:#17303F;          /* 먹선 */
+  --muted:#5E7078;        /* 보조 텍스트 */
+  --rule:#B9C8CC;         /* 괘선 */
+  --grid:#DFE7E6;         /* 방안 격자 */
+  --blue:#1D5AA8;         /* 입력값(청색 펜) */
+  --blue-soft:#EDF3FB;
+  --fl:#F5F9FE;           /* 층 공통 속성 셀 */
+  --red:#BE3A2B;          /* 검토 스탬프 */
+  --band:#F4F7F6;         /* 표 머리띠 */
+  --sans:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;
+  --mono:"IBM Plex Mono","Consolas","SF Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--sans);color:var(--ink);font-size:14px;line-height:1.55;
+  background-color:var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:24px 24px;
+  padding:28px 16px 64px;
+}
+.sheet{
+  max-width:1180px;margin:0 auto;background:var(--sheet);
+  border:1.5px solid var(--ink);
+  box-shadow:0 2px 0 rgba(23,48,63,.18), 0 14px 34px rgba(23,48,63,.10);
+}
+/* ── 표제란 (Title block) ─────────────────────────── */
+.titleblock{
+  display:grid;border-bottom:1.5px solid var(--ink);
+  grid-template-columns:minmax(240px,1.35fr) minmax(200px,1.2fr) repeat(2,minmax(130px,.7fr)) minmax(150px,.8fr);
+}
+.tb-cell{padding:12px 16px 11px;border-left:1px solid var(--rule);min-width:0}
+.tb-cell:first-child{border-left:none}
+.tb-label{
+  display:block;font-size:10.5px;font-weight:600;letter-spacing:.14em;
+  color:var(--muted);margin-bottom:4px;
+}
+.tb-title h1{font-size:21px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.tb-title .en{
+  display:block;font-family:var(--mono);font-size:10px;letter-spacing:.22em;
+  color:var(--muted);margin-top:3px;
+}
+.tb-static{font-family:var(--mono);font-size:13px;font-weight:500;padding-top:2px}
+.tb-static small{display:block;font-family:var(--sans);color:var(--muted);font-size:11px;font-weight:400;margin-top:2px}
+.tb-cell input{
+  width:100%;border:none;border-bottom:1px solid var(--rule);background:transparent;
+  font-family:var(--sans);font-size:14px;font-weight:600;color:var(--blue);
+  padding:2px 0 3px;border-radius:0;
+}
+.tb-cell input:focus{outline:none;border-bottom:1.5px solid var(--blue)}
+/* ── 툴바 ─────────────────────────────────────────── */
+.toolbar{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+  padding:10px 20px;border-bottom:1px solid var(--rule);background:var(--band);
+}
+.toolbar .spacer{flex:1}
+button{
+  font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--ink);
+  background:var(--sheet);border:1px solid var(--ink);border-radius:2px;
+  padding:6px 13px;cursor:pointer;transition:background .12s;
+}
+button:hover{background:var(--blue-soft)}
+button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+button.primary:hover{background:#22404F}
+button.ghost{border-color:var(--rule);color:var(--muted)}
+button.ghost:hover{color:var(--ink);border-color:var(--ink);background:var(--sheet)}
+button.mini{font-size:11px;padding:3px 9px;border-color:var(--rule);color:var(--muted)}
+button.mini:hover{color:var(--ink);border-color:var(--ink);background:var(--sheet)}
+button:disabled{opacity:.45;cursor:not-allowed}
+/* ── 본문 공통 ─────────────────────────────────────── */
+.body{padding:8px 20px 26px}
+/* 치수선 구분선 */
+.dim{display:flex;align-items:center;gap:14px;margin:26px 0 16px;user-select:none}
+.dim .ln{flex:1;height:1px;background:var(--rule);position:relative}
+.dim .ln::before,.dim .ln::after{
+  content:"";position:absolute;top:-4.5px;width:1.5px;height:10px;
+  background:var(--ink);transform:rotate(45deg);
+}
+.dim .ln::before{left:0}.dim .ln::after{right:0}
+.dim span{
+  font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.2em;
+  color:var(--ink);white-space:nowrap;
+}
+/* ── 설계 조건 ────────────────────────────────────── */
+.cond{display:flex;flex-wrap:wrap;gap:14px}
+.cond-group{
+  border:1px solid var(--rule);flex:1 1 230px;min-width:230px;
+}
+.cond-group h3{
+  font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--muted);
+  background:var(--band);border-bottom:1px solid var(--rule);padding:6px 12px;
+}
+.cond-fields{display:flex}
+.cf{flex:1;padding:10px 12px 12px;border-left:1px solid var(--grid)}
+.cf:first-child{border-left:none}
+.cf label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px}
+.cf .unit{font-family:var(--mono);font-size:10px;color:var(--muted)}
+input.num{
+  width:100%;font-family:var(--mono);font-size:15px;font-weight:600;color:var(--blue);
+  border:1px solid var(--rule);border-radius:2px;background:#fff;
+  padding:5px 8px;text-align:right;font-variant-numeric:tabular-nums;
+}
+input.num:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-soft)}
+input.txt{
+  width:100%;font-family:var(--sans);font-size:13px;font-weight:600;color:var(--blue);
+  border:1px solid var(--rule);border-radius:2px;background:#fff;padding:5px 8px;
+}
+input.txt:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-soft)}
+.cond-note{flex-basis:100%;font-size:11.5px;color:var(--muted)}
+/* ── 탭 ──────────────────────────────────────────── */
+.tabs{display:flex;gap:0;border-bottom:1.5px solid var(--ink);margin-bottom:0}
+.tab{
+  border:1px solid var(--rule);border-bottom:none;border-radius:2px 2px 0 0;
+  background:var(--band);color:var(--muted);padding:8px 18px;margin-right:6px;
+  font-size:13px;font-weight:600;
+}
+.tab[aria-selected="true"]{
+  background:var(--sheet);color:var(--ink);border-color:var(--ink);
+  position:relative;top:1.5px;padding-bottom:9.5px;
+}
+.panel{display:none;border:1px solid var(--rule);border-top:none;padding:16px 16px 18px}
+.panel.active{display:block}
+.panel-cap{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:12px}
+.panel-cap h2{font-size:14.5px;font-weight:700}
+.panel-cap .formula{font-family:var(--mono);font-size:11px;color:var(--muted)}
+/* ── 기둥 선택 칩 ─────────────────────────────────── */
+.story-ctl{
+  margin-bottom:14px;border:1px dashed var(--rule);background:var(--band);
+  padding:10px 12px 12px;
+}
+.ctl-label{
+  font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted);
+  margin-right:10px;white-space:nowrap;
+}
+.chiprow{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:11px}
+.chipbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{
+  font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--muted);
+  background:var(--sheet);border:1px solid var(--rule);border-radius:2px;
+  padding:5px 14px;cursor:pointer;
+}
+.chip:hover{border-color:var(--ink);color:var(--ink);background:var(--sheet)}
+.chip[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip-add{
+  border:1px dashed var(--blue);color:var(--blue);background:transparent;
+  font-family:var(--sans);font-size:12px;font-weight:600;padding:5px 12px;
+}
+.chip-add:hover{background:var(--blue-soft)}
+.fieldrow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.fieldrow .cf{padding:0;border:none;flex:0 0 auto;width:150px}
+.fieldrow .hint{font-size:11.5px;color:var(--muted);flex:1;min-width:220px}
+/* ── 표 ──────────────────────────────────────────── */
+.twrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+#colTable{min-width:1000px}
+#storyTable{min-width:1110px}
+th{
+  font-size:11px;font-weight:600;letter-spacing:.03em;color:var(--muted);
+  background:var(--band);border:1px solid var(--rule);border-bottom:2px solid var(--ink);
+  padding:7px 8px;text-align:center;line-height:1.35;white-space:nowrap;
+}
+th .u{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:0;font-weight:400}
+th.fl{background:#E9F1FA}
+td{border:1px solid var(--grid);padding:4px 8px;text-align:center;font-size:13.5px}
+td.fl{background:var(--fl)}
+td.calc{font-family:var(--mono);font-weight:500;color:var(--ink);white-space:nowrap}
+td.calc.na{color:var(--rule)}
+td.calc.dirty{color:var(--red)}
+@keyframes flashbg{0%{background:#FFF3C8}100%{background:transparent}}
+td.calc.flash{animation:flashbg 1.2s ease-out}
+td.calc .sub{font-size:10.5px;color:var(--muted);font-family:var(--sans)}
+td input.num{border-color:transparent;background:transparent;padding:4px 4px;font-size:13.5px}
+td input.num:hover{border-color:var(--rule)}
+td input.num:focus{border-color:var(--blue);background:#fff}
+td input.txt{border-color:transparent;background:transparent;padding:4px 4px;font-size:12.5px;text-align:left}
+td input.txt:hover{border-color:var(--rule)}
+td input.txt:focus{border-color:var(--blue);background:#fff}
+td.tag input.txt{text-align:center;font-family:var(--mono);font-weight:600}
+td.lvl input.txt{text-align:center;font-family:var(--mono);font-weight:600}
+td.btns{white-space:nowrap}
+tfoot td{
+  border-top:2.5px double var(--ink);background:var(--band);
+  font-weight:700;font-family:var(--mono);padding:7px 8px;white-space:nowrap;
+}
+tfoot td:first-child{font-family:var(--sans)}
+.del{
+  border:none;background:none;color:var(--rule);font-size:15px;line-height:1;
+  padding:2px 6px;cursor:pointer;
+}
+.del:hover{color:var(--red);background:none}
+.gov{
+  display:block;font-size:10px;color:var(--red);font-weight:700;
+  font-family:var(--sans);letter-spacing:.02em;margin-top:1px;
+}
+.warn-inline{font-size:11.5px;color:var(--red);margin-top:8px;display:none}
+.rowbar{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rowbar .hint{font-size:11.5px;color:var(--muted)}
+/* 기초 전달하중 스탬프 */
+.stamp{
+  margin-top:14px;display:inline-flex;align-items:stretch;
+  border:1.5px solid var(--red);color:var(--red);border-radius:2px;overflow:hidden;
+}
+.stamp .k{
+  padding:8px 12px;font-size:11.5px;font-weight:700;letter-spacing:.05em;
+  border-right:1.5px solid var(--red);display:flex;flex-direction:column;justify-content:center;
+  background:rgba(190,58,43,.06);line-height:1.4;
+}
+.stamp .k b{font-family:var(--mono);font-weight:600}
+.stamp .v{padding:8px 14px;font-family:var(--mono);font-size:14px;font-weight:600;display:flex;align-items:center;gap:16px}
+.stamp .v b{font-weight:600}
+/* ── 확인 대화상자 (샌드박스 환경에서 confirm/alert 차단 대응) ── */
+.modal-back{
+  position:fixed;inset:0;background:rgba(23,48,63,.45);
+  display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;
+}
+.modal-back[hidden]{display:none}
+.modal{
+  background:var(--sheet);border:1.5px solid var(--ink);border-radius:2px;
+  box-shadow:0 14px 34px rgba(23,48,63,.25);max-width:400px;width:100%;
+}
+.modal .m-head{
+  font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.18em;
+  color:var(--muted);padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--band);
+}
+.modal p{padding:16px 14px 4px;font-size:13.5px;line-height:1.6;word-break:keep-all}
+.modal .m-btns{display:flex;justify-content:flex-end;gap:8px;padding:14px}
+button.danger{background:var(--red);border-color:var(--red);color:#fff}
+button.danger:hover{background:#A93325}
+/* ── 일반주기 ─────────────────────────────────────── */
+.notes ol{list-style:none;counter-reset:gn}
+.notes li{
+  counter-increment:gn;position:relative;padding-left:58px;margin-bottom:6px;
+  font-size:12px;color:var(--muted);
+}
+.notes li::before{
+  content:"GN-" counter(gn);position:absolute;left:0;top:1px;
+  font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--ink);
+  letter-spacing:.05em;
+}
+.foot{
+  border-top:1.5px solid var(--ink);padding:10px 20px;display:flex;flex-wrap:wrap;gap:8px;
+  justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--muted);
+  letter-spacing:.06em;
+}
+/* ── 반응형 ──────────────────────────────────────── */
+@media (max-width:820px){
+  .titleblock{grid-template-columns:1fr 1fr}
+  .tb-title{grid-column:1/-1;border-left:none}
+  .tb-cell{border-top:1px solid var(--rule)}
+  .tb-cell:nth-child(-n+1){border-top:none}
+  body{padding:14px 8px 40px}
+  .body{padding:4px 12px 20px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* ── PDF 저장 모드: 인쇄 레이아웃과 동일하게 캡처 ── */
+body.pdf-mode{background:#fff;background-image:none;padding:0}
+body.pdf-mode .sheet{width:1180px;max-width:none;box-shadow:none;margin:0}
+body.pdf-mode .no-print{display:none!important}
+body.pdf-mode .panel{display:block!important;border:none;padding:8px 0 0}
+body.pdf-mode .panel + .panel{margin-top:14px}
+body.pdf-mode input{border-color:transparent!important;background:transparent!important;box-shadow:none!important}
+body.pdf-mode .twrap{overflow:visible}
+body.pdf-mode .notes-block{display:none}
+/* ── 인쇄: 계산서 출력 ────────────────────────────── */
+@page{size:A4 landscape;margin:11mm}
+@media print{
+  body{background:#fff;padding:0;font-size:12px}
+  .sheet{border:1.2px solid #000;box-shadow:none;max-width:none}
+  .no-print{display:none!important}
+  .panel{display:block!important;border:none;padding:8px 0 0}
+  .panel + .panel{margin-top:14px}
+  input{border:none!important;background:transparent!important;box-shadow:none!important}
+  thead{display:table-header-group}
+  tr{page-break-inside:avoid}
+  .dim{margin:16px 0 10px}
+  #colTable,#storyTable{min-width:0}
+  .twrap{overflow:visible}
+  .notes-block{display:none!important}
+}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <!-- 표제란 -->
+  <header class="titleblock">
+    <div class="tb-cell tb-title">
+      <span class="tb-label">계산서명 / TITLE</span>
+      <h1>기둥 축력 계산서<span class="en">COLUMN AXIAL LOAD CALCULATION</span></h1>
+    </div>
+    <div class="tb-cell">
+      <label class="tb-label" for="prjName">프로젝트 / PROJECT</label>
+      <input id="prjName" type="text" value="○○ 신축공사" autocomplete="off">
+    </div>
+    <div class="tb-cell">
+      <label class="tb-label" for="prjDate">작성일 / DATE</label>
+      <input id="prjDate" type="date">
+    </div>
+    <div class="tb-cell">
+      <label class="tb-label" for="prjAuthor">작성자 / ENGR.</label>
+      <input id="prjAuthor" type="text" placeholder="성명" autocomplete="off">
+    </div>
+    <div class="tb-cell">
+      <span class="tb-label">하중조합 / UNITS</span>
+      <div class="tb-static">D+L · 1.2D+1.6L<small>kN, kN/m² (1 kN ≈ 0.102 tonf)</small></div>
+    </div>
+  </header>
+
+  <!-- 툴바 -->
+  <div class="toolbar no-print">
+    <button type="button" id="btnPdf" class="primary">PDF로 저장</button>
+    <button type="button" id="btnPrint">계산서 인쇄</button>
+    <button type="button" id="btnXlsx">엑셀로 저장</button>
+    <div class="spacer"></div>
+    <button type="button" id="btnReset" class="ghost">예시로 초기화</button>
+  </div>
+
+  <div class="body">
+
+    <!-- 01 설계 조건 -->
+    <div class="dim"><span>01 · 설계 조건 DESIGN CONDITIONS</span><i class="ln"></i></div>
+    <section class="cond" aria-label="설계 조건">
+      <div class="cond-group">
+        <h3>지붕층 기본하중</h3>
+        <div class="cond-fields">
+          <div class="cf">
+            <label for="dlR">고정하중 DL <span class="unit">kN/m²</span></label>
+            <input class="num" id="dlR" type="number" step="0.1" min="0" value="6.5" inputmode="decimal">
+          </div>
+          <div class="cf">
+            <label for="llR">활하중 LL <span class="unit">kN/m²</span></label>
+            <input class="num" id="llR" type="number" step="0.1" min="0" value="1.0" inputmode="decimal">
+          </div>
+        </div>
+      </div>
+      <div class="cond-group">
+        <h3>기준층 기본하중</h3>
+        <div class="cond-fields">
+          <div class="cf">
+            <label for="dlF">고정하중 DL <span class="unit">kN/m²</span></label>
+            <input class="num" id="dlF" type="number" step="0.1" min="0" value="7.0" inputmode="decimal">
+          </div>
+          <div class="cf">
+            <label for="llF">활하중 LL <span class="unit">kN/m²</span></label>
+            <input class="num" id="llF" type="number" step="0.1" min="0" value="2.5" inputmode="decimal">
+          </div>
+        </div>
+      </div>
+      <div class="cond-group" style="flex:0 1 180px;min-width:180px">
+        <h3>자중할증계수 α</h3>
+        <div class="cond-fields">
+          <div class="cf">
+            <label for="alpha">고정하중 D에 곱함</label>
+            <input class="num" id="alpha" type="number" step="0.01" min="1" value="1.05" inputmode="decimal">
+          </div>
+        </div>
+      </div>
+      <p class="cond-note">위 값은 층수를 늘릴 때 새 층에 채워지는 기본값입니다(지붕층→R, 기준층→지상층·1F). 아래층(B1~)을 추가하면 바로 위 층의 하중이 복사되며, <b>층마다 실제 하중이 다르면 [층별 상세계산] 표의 DL·LL을 층별로 직접 수정</b>하세요(전체 기둥에 공통 적용). 기본값 근거: KDS 41 10 15 — 사무실 2.5, 로비 4.0, 옥내 승용차 주차장 3.0 kN/m² 등. <b style="color:var(--blue)">파란색 값 = 입력</b>, 검은색 값 = 자동 계산.</p>
+    </section>
+
+    <!-- 02 축력 산정 -->
+    <div class="dim"><span>02 · 축력 산정 AXIAL LOAD</span><i class="ln"></i></div>
+
+    <nav class="tabs no-print" role="tablist" aria-label="산정 방식">
+      <button type="button" class="tab" id="tabCols" role="tab" aria-selected="true" aria-controls="panelCols">기둥축력 일람표</button>
+      <button type="button" class="tab" id="tabStory" role="tab" aria-selected="false" aria-controls="panelStory">층별 상세계산</button>
+    </nav>
+
+    <!-- 2.1 기둥축력 일람표 (층별 상세계산 연동 요약) -->
+    <section class="panel active" id="panelCols" role="tabpanel" aria-labelledby="tabCols">
+      <div class="panel-cap">
+        <h2>2.1 기둥축력 일람표</h2>
+        <span class="formula">층별 상세계산에 정의된 기둥의 최하층 기둥(기초 전달) 축력 요약 — ΣD는 α 반영</span>
+      </div>
+      <div class="twrap">
+        <table id="colTable">
+          <thead>
+            <tr>
+              <th>기둥부호</th>
+              <th>가로 × 세로<span class="u">m</span></th>
+              <th>분담면적 A<span class="u">m²</span></th>
+              <th>지지층수 n<span class="u">개층</span></th>
+              <th>고정하중 ΣD<span class="u">kN</span></th>
+              <th>활하중 ΣL<span class="u">kN</span></th>
+              <th>사용하중 ΣD+ΣL<span class="u">kN</span></th>
+              <th>계수하중 1.2ΣD+1.6ΣL<span class="u">kN</span></th>
+              <th>비고</th>
+              <th class="no-print" aria-label="상세·삭제"></th>
+            </tr>
+          </thead>
+          <tbody id="colBody"></tbody>
+          <tfoot>
+            <tr>
+              <td>합계</td><td></td>
+              <td id="sumA">—</td><td></td>
+              <td id="sumD">—</td><td id="sumL">—</td>
+              <td id="sumP">—</td><td id="sumPu">—</td>
+              <td style="font-family:var(--sans);font-weight:400;font-size:11px;color:var(--muted)">전체 중력하중 (기초설계 참고)</td>
+              <td class="no-print"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="warn-inline" id="sumWarn">⚠ 붉은색 기둥은 층별 상세계산에 미입력 값이 있어 불완전하며 합계에서 제외됩니다.</p>
+      <div class="rowbar no-print">
+        <button type="button" id="btnAddCol">＋ 기둥 추가</button>
+        <span class="hint">기둥 추가 후 [상세]를 누르면 층별 상세계산으로 이동해 면적을 입력할 수 있습니다. 이 표의 값은 층별 상세계산 결과에서 자동 집계됩니다.</span>
+      </div>
+    </section>
+
+    <!-- 2.2 층별 상세계산 -->
+    <section class="panel" id="panelStory" role="tabpanel" aria-labelledby="tabStory">
+      <div class="panel-cap">
+        <h2>2.2 층별 상세계산 — <span id="capTag" style="font-family:var(--mono)">C1</span></h2>
+        <span class="formula">층별 D = A·DL&ensp;·&ensp;ΣD = ΣD<sub>상부</sub>+α·D&ensp;·&ensp;ΣL = ΣL<sub>상부</sub>+L</span>
+      </div>
+
+      <div class="story-ctl no-print">
+        <div class="fieldrow">
+          <div class="cf" style="width:170px">
+            <label for="genN">지상 층수 N (지붕 포함)</label>
+            <input class="num" id="genN" type="number" min="1" max="200" step="1" inputmode="numeric">
+          </div>
+          <span class="hint">지상 층수를 바꾸면 슬래브 레벨이 전 기둥 공통으로 자동 생성·삭제됩니다. 1F 이하 층은 표 아래의 <b>[＋ 아래층 추가]</b>로 붙입니다. 레벨명·DL·LL(옅은 파랑 셀)은 층 공통, 면적(Lx·Ly)만 기둥별 입력. 지지하지 않는 층은 면적 0.</span>
+        </div>
+        <div class="chiprow">
+          <span class="ctl-label">기둥 선택</span>
+          <div class="chipbar" id="chipBar" role="tablist" aria-label="층별계산 기둥 목록"></div>
+        </div>
+        <div class="fieldrow" style="margin-top:11px">
+          <div class="cf">
+            <label for="storyTag">기둥부호 (이름 변경)</label>
+            <input class="txt" id="storyTag" type="text" autocomplete="off">
+          </div>
+          <button type="button" id="btnDelStoryCol" class="ghost">선택 기둥 삭제</button>
+          <span class="hint">기둥 추가 시 현재 기둥의 면적 구성이 복사됩니다.</span>
+        </div>
+      </div>
+
+      <div class="twrap">
+        <table id="storyTable">
+          <thead>
+            <tr>
+              <th class="fl">슬래브 레벨<span class="u">층 공통</span></th>
+              <th>가로 Lx<span class="u">m · 기둥별</span></th>
+              <th>세로 Ly<span class="u">m · 기둥별</span></th>
+              <th>분담면적 A<span class="u">m²</span></th>
+              <th class="fl">DL<span class="u">kN/m² · 층 공통</span></th>
+              <th class="fl">LL<span class="u">kN/m² · 층 공통</span></th>
+              <th>층별 D<span class="u">kN</span></th>
+              <th>층별 L<span class="u">kN</span></th>
+              <th>누적 ΣD<span class="u">kN</span></th>
+              <th>누적 ΣL<span class="u">kN</span></th>
+              <th>사용하중 ΣD+ΣL<span class="u">kN</span></th>
+              <th>계수하중 1.2ΣD+1.6ΣL<span class="u">kN</span></th>
+              <th>해당 기둥</th>
+            </tr>
+          </thead>
+          <tbody id="storyBody"></tbody>
+        </table>
+      </div>
+      <p class="warn-inline" id="storyWarn">⚠ 미입력 값이 있습니다. 해당 층은 0으로 계산되어 누적값이 불완전합니다. (지지하지 않는 층은 빈칸 대신 면적 0을 입력하세요)</p>
+
+      <div class="rowbar no-print">
+        <button type="button" id="btnAddBelow">＋ 아래층 추가</button>
+        <button type="button" id="btnDelBelow" class="ghost">− 맨 아래층 삭제</button>
+        <span class="hint">아래층은 1F → B1 → B2 … 순서로 붙습니다. 1F 슬래브는 B1 기둥에, B(k) 슬래브는 B(k+1) 기둥에 재하되며, 최하층 바닥(온통기초·토간 슬래브)은 목록에 없습니다. 새 아래층에는 바로 위 층의 하중이 복사되니 표에서 수정하세요. 삭제한 아래층은 다시 추가하면 입력값이 복원됩니다.</span>
+      </div>
+
+      <div class="stamp" role="status" aria-label="기초 전달하중">
+        <span class="k">기초 전달하중<b id="baseTag">C1</b><span id="baseStory">1층 기둥</span></span>
+        <span class="v"><b>P = <span id="baseP">—</span> kN</b><b>Pu = <span id="basePu">—</span> kN</b></span>
+      </div>
+
+      <div class="rowbar no-print" style="margin-top:14px">
+        <button type="button" id="btnApply" class="primary">적용하고 일람표 보기</button>
+        <span class="hint" id="applyNote">입력값은 수정 즉시 자동 저장되어 일람표에 반영됩니다. 버튼을 누르면 일람표로 이동해 갱신된 값을 확인할 수 있습니다.</span>
+      </div>
+    </section>
+
+    <!-- 03 NOTES (화면 전용, 출력물 제외) -->
+    <div class="notes-block">
+    <div class="dim"><span>03 · NOTES</span><i class="ln"></i></div>
+    <section class="notes">
+      <ol>
+        <li>기둥축력 일람표는 층별 상세계산에 정의된 기둥만 표시하며, 각 기둥의 최하층 기둥(기초 전달) 축력을 자동 집계한다.</li>
+        <li>슬래브 레벨명과 층별 하중(DL·LL)은 층의 속성으로서 모든 기둥에 공통 적용되며, 층마다 다르게 입력할 수 있다. 분담면적(Lx·Ly)은 기둥별·층별 속성이다.</li>
+        <li>[아래층 추가]로 1F 이하 슬래브를 1F → B1 → B2 … 순서로 추가할 수 있다. 1F 슬래브는 지하 1층(B1) 기둥에, B(k) 슬래브는 B(k+1) 기둥에 재하되며, 최하층 바닥은 온통기초·토간 슬래브로 보아 기초로 직접 전달되므로 목록에서 제외한다.</li>
+        <li>아래층이 없는 경우 1F 바닥은 토간 슬래브로 보아 기둥 재하에서 제외하며, 최하 기둥은 1층 기둥이다. 아래층이 있으면 최하 기둥은 B층 기둥(예: B1까지 추가 시 B2층 기둥)이다.</li>
+        <li>기둥이 지지하지 않는 층은 해당 층의 면적을 0으로 입력한다(예: 저층부 기둥). 지지층수 n은 면적이 0보다 큰 층의 수로 자동 산정된다.</li>
+        <li>자중할증계수 α는 기둥 자중 등을 반영하기 위해 고정하중 D에만 곱한다(통상 1.00~1.10).</li>
+        <li>활하중 저감은 적용하지 않았다(안전측). 영향면적 36 m² 이상인 경우 KDS 41 10 15 4.7에 따라 저감할 수 있다.</li>
+        <li>활하중이 매우 작은 경우(대략 L/D &lt; 0.125) 1.4D 조합이 지배할 수 있으며, 해당 기둥에는 표에 <b style="color:var(--red)">1.4D 지배</b>로 표시된다.</li>
+        <li>층별 상세계산의 각 행 누적축력은 해당 슬래브 레벨 직하부 기둥의 축력이며, 마지막 행이 최하층 기둥(기초 전달하중)이다.</li>
+        <li>지상 층수 N 입력과 [아래층 추가/삭제]에 따라 슬래브 레벨이 자동 생성·삭제되며, 남는 층의 입력값(하중·면적)은 유지된다. 삭제한 층은 다시 추가하면 입력값이 복원된다.</li>
+        <li>하중조합·설계하중은 KDS 41 10 15(건축구조기준 설계하중)에 따른다. 단위: kN (1 kN ≈ 0.102 tonf). 지하층 흙·수압, 벽체 자중 등은 별도 고려한다.</li>
+        <li>입력값은 브라우저에 저장되지 않는다. 보관이 필요하면 [PDF로 저장]·[엑셀로 저장] 버튼을 이용하거나, [계산서 인쇄]에서 'PDF로 저장'을 선택한다. 03 NOTES는 화면 참고용으로만 표시되며 출력물(PDF·인쇄)에는 포함되지 않는다.</li>
+        <li>본 도구는 예비설계용 중력 축력 산정 도구이며, 최종 설계는 구조해석 결과로 검증한다.</li>
+      </ol>
+    </section>
+    </div>
+  </div>
+
+  <footer class="foot">
+    <span>COLUMN AXIAL LOAD CALCULATION SHEET</span>
+    <span>REF. KDS 41 10 15 · <b style="color:var(--ink);font-weight:600">made by KSN</b></span>
+  </footer>
+</div>
+
+<!-- 확인 대화상자 -->
+<div class="modal-back no-print" id="modalBack" hidden>
+  <div class="modal" role="alertdialog" aria-modal="true" aria-describedby="modalMsg">
+    <div class="m-head">CONFIRM · 확인</div>
+    <p id="modalMsg"></p>
+    <div class="m-btns">
+      <button type="button" id="modalCancel" class="ghost">취소</button>
+      <button type="button" id="modalOk" class="danger">확인</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+"use strict";
+/* ================= 계산 코어 (순수 함수) ================= */
+/*CALC-BEGIN*/
+function isNum(v){ return typeof v === "number" && isFinite(v); }
+
+/** i번째 슬래브 직하부 기둥 명칭. aboveN = 지상 슬래브 수(R 포함) */
+function colLabel(i, aboveN){
+  return i < aboveN ? (aboveN - i) + "층 기둥" : "B" + (i - aboveN + 1) + "층 기둥";
+}
+
+/** 층별 누적 산정.
+ *  floors: 위(지붕)→아래 [{name,dl,ll}] — 층 공통 속성
+ *  areas : 같은 순서 [{lx,ly}]          — 기둥별 분담면적 (0 = 미지지)
+ *  aboveN: 지상 슬래브 수 (생략 시 전체를 지상으로 간주) */
+function calcStory(floors, areas, alpha, aboveN){
+  if(aboveN == null) aboveN = floors.length;
+  let SD = 0, SL = 0, anyIncomplete = false, supCount = 0;
+  const N = floors.length;
+  return floors.map(function(fl, i){
+    const ar = areas[i] || {};
+    const ok = isNum(ar.lx) && isNum(ar.ly) && isNum(fl.dl) && isNum(fl.ll)
+            && ar.lx >= 0 && ar.ly >= 0 && fl.dl >= 0 && fl.ll >= 0 && isNum(alpha);
+    const supported = ok && ar.lx > 0 && ar.ly > 0;
+    let A = null, d = 0, l = 0;
+    if(supported){ A = ar.lx * ar.ly; d = A * fl.dl; l = A * fl.ll; supCount++; }
+    else if(!ok){ anyIncomplete = true; }
+    SD += alpha * d;  SL += l;
+    return {
+      ok: ok, supported: supported, A: A,
+      d: supported ? d : null, l: supported ? l : null,
+      SD: SD, SL: SL, P: SD + SL, Pu: 1.2 * SD + 1.6 * SL,
+      label: colLabel(i, aboveN) + (i === N - 1 ? " (기초 전달)" : ""),
+      dirty: anyIncomplete, supCount: supCount
+    };
+  });
+}
+
+/** 기둥 1본의 요약(일람표용): 최하층 누적축력 + 지지층수 */
+function summarizeCol(floors, areas, alpha){
+  if(!floors || !floors.length) return null;
+  const res = calcStory(floors, areas, alpha);
+  const last = res[res.length - 1];
+  return {
+    n: last.supCount,
+    D: last.SD, L: last.SL, P: last.P, Pu: last.Pu,
+    Pu14: 1.4 * last.SD, gov14: 1.4 * last.SD > last.Pu,
+    dirty: last.dirty
+  };
+}
+
+/** 분담면적 요약: 지지층(면적>0)이 모두 동일하면 대표 치수, 아니면 범위. 면적 0(미지지)은 무시 */
+function areaStats(areas){
+  const valid = areas.filter(function(ar){
+    return isNum(ar.lx) && isNum(ar.ly) && ar.lx > 0 && ar.ly > 0;
+  });
+  if(valid.length === 0) return { any:false };
+  const uniform = valid.every(function(ar){ return ar.lx === valid[0].lx && ar.ly === valid[0].ly; });
+  let mn = Infinity, mx = -Infinity;
+  valid.forEach(function(ar){ const a = ar.lx * ar.ly; if(a < mn) mn = a; if(a > mx) mx = a; });
+  return { any:true, uniform:uniform, lx:valid[0].lx, ly:valid[0].ly, minA:mn, maxA:mx };
+}
+
+/** 레벨명 재부여: 지상 R, NF…2F / 지하 1F, B1…B(M−1) */
+function renameLevels(floors, aboveN){
+  if(aboveN == null) aboveN = floors.length;
+  floors.forEach(function(fl, i){
+    if(i < aboveN) fl.name = i === 0 ? "R" : (aboveN - i + 1) + "F";
+    else { const j = i - aboveN; fl.name = j === 0 ? "1F" : "B" + j; }
+  });
+}
+
+/** 배열을 N개로 자동 생성·삭제 (공통 유틸).
+ *  store: {rows:[], trim:[]}. 줄이면 잘린 행을 trim에 보관, 늘리면 trim부터 복원, 부족분은 mkRow(직전행)로 생성 */
+function resizeRows(store, N, mkRow){
+  store.trim = store.trim || [];
+  const cur = store.rows.length;
+  if(N === cur) return false;
+  if(N < cur){
+    store.trim = store.rows.splice(N).concat(store.trim);
+  } else {
+    let need = N - cur;
+    const back = store.trim.splice(0, need);
+    back.forEach(function(r){ store.rows.push(r); need--; });
+    for(let k = 0; k < need; k++){
+      store.rows.push(mkRow(store.rows[store.rows.length - 1] || null));
+    }
+  }
+  return true;
+}
+/*CALC-END*/
+
+/* ================= 상태 =================
+   floors: 층 공통 [{name,dl,ll}] / cols[i].areas: 기둥별 [{lx,ly}] (floors와 인덱스 정렬)
+   aboveN: 지상 슬래브 수(R 포함), belowM: 지하 층수 → 지하 슬래브 행 수 = M (1F, B1 … B(M−1)) */
+function exampleState(){
+  // 지상 5층 · 지하 1층 예시 — 1F 로비(LL 4.0)로 층별 하중 상이 시연
+  const floors = [
+    { name:"R",  dl:6.5, ll:1.0 },
+    { name:"5F", dl:7.0, ll:2.5 },
+    { name:"4F", dl:7.0, ll:2.5 },
+    { name:"3F", dl:7.0, ll:2.5 },
+    { name:"2F", dl:7.0, ll:2.5 },
+    { name:"1F", dl:7.0, ll:4.0 }
+  ];
+  const rep = function(lx, ly){ return floors.map(function(){ return { lx:lx, ly:ly }; }); };
+  return {
+    project: { name: "○○ 신축공사", date: todayISO(), author: "" },
+    cond: { dlR: 6.5, llR: 1.0, dlF: 7.0, llF: 2.5, alpha: 1.05 },
+    aboveN: 5,
+    belowM: 1,
+    floors: floors,
+    trimAboveF: [], trimBelowF: [],
+    cols: [
+      { tag:"C1", note:"내부기둥",               areas: rep(8.0, 7.0) },
+      { tag:"C2", note:"외부기둥 (장변측)",       areas: rep(8.0, 3.5) },
+      { tag:"C3", note:"외부기둥 (단변측)",       areas: rep(4.0, 7.0) },
+      { tag:"C4", note:"모서리기둥",             areas: rep(4.0, 3.5) },
+      { tag:"C5", note:"저층부 기둥 (4F~2F 지지)", areas: [ {lx:0,ly:0}, {lx:0,ly:0}, {lx:8.0,ly:7.0}, {lx:8.0,ly:7.0}, {lx:8.0,ly:7.0}, {lx:0,ly:0} ] }
+    ],
+    active: 0
+  };
+}
+let S = exampleState();
+function activeCol(){ return S.cols[S.active]; }
+
+/* ================= 유틸 ================= */
+const $ = function(sel){ return document.querySelector(sel); };
+function todayISO(){ return new Date().toISOString().slice(0, 10); }
+const nf1 = new Intl.NumberFormat("ko-KR", { minimumFractionDigits:1, maximumFractionDigits:1 });
+const nf2 = new Intl.NumberFormat("ko-KR", { minimumFractionDigits:2, maximumFractionDigits:2 });
+const nfD = new Intl.NumberFormat("ko-KR", { maximumFractionDigits:2 });
+function f1(v){ return v == null ? "—" : nf1.format(v); }
+function f2(v){ return v == null ? "—" : nf2.format(v); }
+function fd(v){ return nfD.format(v); }
+function pf(el){ const v = parseFloat(el.value); return isFinite(v) ? v : NaN; }
+function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;"); }
+function numv(v){ return isNum(v) ? v : ""; }
+
+function readCond(){
+  S.cond = {
+    dlR: pf($("#dlR")), llR: pf($("#llR")),
+    dlF: pf($("#dlF")), llF: pf($("#llF")),
+    alpha: pf($("#alpha"))
+  };
+}
+
+/* 건물 층수 변경: 지상(경계 위치)·지하(맨 아래) 구간을 나눠 층 하중 + 전 기둥 면적을 동기 리사이즈 */
+function resizeBuilding(N, M){
+  readCond();
+  const oldAbove = S.aboveN;
+  let changed = false;
+
+  const fa = { rows: S.floors.slice(0, oldAbove), trim: S.trimAboveF };
+  const fb = { rows: S.floors.slice(oldAbove),    trim: S.trimBelowF };
+  if(resizeRows(fa, N, function(){ return { name:"", dl: S.cond.dlF, ll: S.cond.llF }; })) changed = true;
+  if(resizeRows(fb, M, function(prev){
+    return prev ? { name:"", dl: prev.dl, ll: prev.ll }          // B1~ : 바로 위 층 복사
+                : { name:"", dl: S.cond.dlF, ll: S.cond.llF };   // 1F  : 기준층 기본
+  })) changed = true;
+  if(!changed) return false;
+
+  S.floors = fa.rows.concat(fb.rows);
+  S.trimAboveF = fa.trim; S.trimBelowF = fb.trim;
+
+  S.cols.forEach(function(c){
+    const aa = { rows: c.areas.slice(0, oldAbove), trim: c._trimA || [] };
+    const ab = { rows: c.areas.slice(oldAbove),    trim: c._trimB || [] };
+    const mk = function(prev){ return { lx: prev ? prev.lx : 8.0, ly: prev ? prev.ly : 7.0 }; };
+    resizeRows(aa, N, mk);
+    resizeRows(ab, M, mk);
+    c.areas = aa.rows.concat(ab.rows);
+    c._trimA = aa.trim; c._trimB = ab.trim;
+  });
+
+  S.aboveN = N; S.belowM = M;
+  renameLevels(S.floors, N);
+  return true;
+}
+
+/* ================= 2.1 일람표 (연동 요약) ================= */
+function buildSummaryRows(){
+  const tb = $("#colBody");
+  tb.innerHTML = "";
+  S.cols.forEach(function(c, i){
+    const tr = document.createElement("tr");
+    tr.dataset.i = i;
+    tr.innerHTML =
+      '<td class="tag" style="width:90px"><input class="txt" data-k="tag" value="' + esc(c.tag) + '" aria-label="기둥부호"></td>' +
+      '<td class="calc" data-o="dims">—</td>' +
+      '<td class="calc" data-o="A">—</td>' +
+      '<td class="calc" data-o="n">—</td>' +
+      '<td class="calc" data-o="D">—</td>' +
+      '<td class="calc" data-o="L">—</td>' +
+      '<td class="calc" data-o="P">—</td>' +
+      '<td class="calc" data-o="Pu">—</td>' +
+      '<td style="min-width:140px"><input class="txt" data-k="note" value="' + esc(c.note || "") + '" aria-label="비고"></td>' +
+      '<td class="btns no-print">' +
+        '<button type="button" class="mini detail" aria-label="층별 상세로 이동">상세</button> ' +
+        '<button type="button" class="del" aria-label="기둥 삭제">×</button>' +
+      '</td>';
+    tb.appendChild(tr);
+  });
+}
+
+function recalcSummary(){
+  const rows = $("#colBody").children;
+  let sA = 0, sD = 0, sL = 0, cnt = 0, allUniform = true, anyDirty = false;
+  S.cols.forEach(function(c, i){
+    const cell = function(k){ return rows[i].querySelector('[data-o="' + k + '"]'); };
+    const st = areaStats(c.areas);
+    const sm = summarizeCol(S.floors, c.areas, S.cond.alpha);
+
+    cell("dims").textContent = st.any ? (st.uniform ? fd(st.lx) + " × " + fd(st.ly) : "층별 상이") : "—";
+    cell("A").textContent = st.any
+      ? (st.minA === st.maxA ? f2(st.minA) : f2(st.minA) + " ~ " + f2(st.maxA)) : "—";
+    cell("n").textContent = sm ? sm.n : "—";
+
+    if(sm){
+      cell("D").textContent = f1(sm.D);
+      cell("L").textContent = f1(sm.L);
+      cell("P").textContent = f1(sm.P);
+      cell("Pu").innerHTML  = f1(sm.Pu) + (sm.gov14 && !sm.dirty && sm.n > 0
+        ? '<span class="gov" title="1.4D = ' + f1(sm.Pu14) + ' kN가 1.2D+1.6L을 상회">1.4D 지배 ' + f1(sm.Pu14) + '</span>' : "");
+      const ttl = sm.dirty ? "층별 상세계산에 미입력 값이 있어 불완전합니다." : "";
+      ["D","L","P","Pu"].forEach(function(k){
+        cell(k).classList.toggle("dirty", sm.dirty);
+        cell(k).title = ttl;
+      });
+      if(sm.dirty){ anyDirty = true; }
+      else {
+        sD += sm.D; sL += sm.L; cnt++;
+        if(st.any && st.uniform && sm.n === S.floors.length){ sA += st.minA; } else { allUniform = false; }
+      }
+    }
+  });
+  $("#sumA").textContent  = (cnt && allUniform && !anyDirty) ? f2(sA) : "—";
+  $("#sumD").textContent  = cnt ? f1(sD) : "—";
+  $("#sumL").textContent  = cnt ? f1(sL) : "—";
+  $("#sumP").textContent  = cnt ? f1(sD + sL) : "—";
+  $("#sumPu").textContent = cnt ? f1(1.2 * sD + 1.6 * sL) : "—";
+  $("#sumWarn").style.display = anyDirty ? "block" : "none";
+  markApplied();
+}
+
+/* ================= 2.2 층별 상세 ================= */
+function renderChips(){
+  const bar = $("#chipBar");
+  bar.innerHTML = "";
+  S.cols.forEach(function(c, i){
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.dataset.i = i;
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", i === S.active);
+    b.textContent = c.tag || "(이름 없음)";
+    bar.appendChild(b);
+  });
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "chip-add";
+  add.id = "btnAddStoryCol";
+  add.textContent = "＋ 기둥 추가";
+  bar.appendChild(add);
+}
+
+function syncStoryCtl(){
+  const c = activeCol();
+  $("#storyTag").value = c.tag;
+  $("#genN").value = S.aboveN;
+  $("#capTag").textContent = c.tag || "—";
+  $("#baseTag").textContent = c.tag || "—";
+  $("#baseStory").textContent = (S.belowM >= 1 ? "B" + S.belowM : "1") + "층 기둥";
+  $("#btnDelStoryCol").disabled = S.cols.length <= 1;
+  $("#btnDelBelow").disabled = S.belowM <= 0;
+}
+
+function buildStoryRows(){
+  const tb = $("#storyBody");
+  tb.innerHTML = "";
+  const c = activeCol();
+  S.floors.forEach(function(fl, i){
+    const ar = c.areas[i];
+    const tr = document.createElement("tr");
+    tr.dataset.i = i;
+    tr.innerHTML =
+      '<td class="lvl fl" style="width:88px"><input class="txt" data-k="name" value="' + esc(fl.name) + '" aria-label="슬래브 레벨"></td>' +
+      '<td style="width:76px"><input class="num" data-k="lx" type="number" step="0.1" min="0" value="' + numv(ar.lx) + '" aria-label="가로 Lx"></td>' +
+      '<td style="width:76px"><input class="num" data-k="ly" type="number" step="0.1" min="0" value="' + numv(ar.ly) + '" aria-label="세로 Ly"></td>' +
+      '<td class="calc" data-o="A">—</td>' +
+      '<td class="fl" style="width:80px"><input class="num" data-k="dl" type="number" step="0.1" min="0" value="' + numv(fl.dl) + '" aria-label="DL"></td>' +
+      '<td class="fl" style="width:80px"><input class="num" data-k="ll" type="number" step="0.1" min="0" value="' + numv(fl.ll) + '" aria-label="LL"></td>' +
+      '<td class="calc" data-o="d">—</td>' +
+      '<td class="calc" data-o="l">—</td>' +
+      '<td class="calc" data-o="SD">—</td>' +
+      '<td class="calc" data-o="SL">—</td>' +
+      '<td class="calc" data-o="P">—</td>' +
+      '<td class="calc" data-o="Pu">—</td>' +
+      '<td class="calc" data-o="label" style="font-family:var(--sans);font-size:12px">—</td>';
+    tb.appendChild(tr);
+  });
+}
+
+function recalcStory(){
+  const rows = $("#storyBody").children;
+  const res = calcStory(S.floors, activeCol().areas, S.cond.alpha, S.aboveN);
+  let dirty = false;
+  res.forEach(function(r, i){
+    const cell = function(k){ return rows[i].querySelector('[data-o="' + k + '"]'); };
+    cell("A").innerHTML = r.supported ? f2(r.A) : (r.ok ? '<span class="sub">미지지</span>' : "—");
+    cell("d").textContent = r.supported ? f1(r.d) : "—";
+    cell("l").textContent = r.supported ? f1(r.l) : "—";
+    cell("SD").textContent = f1(r.SD);
+    cell("SL").textContent = f1(r.SL);
+    cell("P").textContent  = f1(r.P);
+    cell("Pu").textContent = f1(r.Pu);
+    cell("label").textContent = r.supCount === 0 ? "— (미지지 구간)" : r.label;
+    ["SD","SL","P","Pu"].forEach(function(k){
+      cell(k).classList.toggle("dirty", r.dirty);
+    });
+    if(!r.ok) dirty = true;
+  });
+  $("#storyWarn").style.display = dirty ? "block" : "none";
+  const last = res[res.length - 1];
+  $("#baseP").textContent  = last ? f1(last.P)  : "—";
+  $("#basePu").textContent = last ? f1(last.Pu) : "—";
+}
+
+function refreshStory(){ syncStoryCtl(); buildStoryRows(); recalcStory(); }
+
+/* 구조 변경(기둥·층 변경) 후 두 화면 동기화 */
+function rebuildViews(){
+  buildSummaryRows(); renderChips(); refreshStory(); recalcSummary();
+}
+
+function uniqueTag(){
+  let k = S.cols.length + 1;
+  while(S.cols.some(function(c){ return c.tag === "C" + k; })) k++;
+  return "C" + k;
+}
+
+function addCol(src){
+  S.cols.push({
+    tag: uniqueTag(),
+    note: "",
+    areas: JSON.parse(JSON.stringify(src.areas))
+  });
+  S.active = S.cols.length - 1;
+  rebuildViews();
+}
+
+/* 자체 확인 대화상자: 미리보기·임베드 등 confirm()이 차단되는 환경에서도 동작 */
+let modalOnOk = null;
+function askConfirm(msg, onOk, okLabel){
+  modalOnOk = onOk || null;
+  $("#modalMsg").textContent = msg;
+  $("#modalOk").textContent = okLabel || "확인";
+  $("#modalCancel").hidden = false;
+  $("#modalBack").hidden = false;
+  $("#modalOk").focus();
+}
+function notice(msg){
+  modalOnOk = null;
+  $("#modalMsg").textContent = msg;
+  $("#modalOk").textContent = "확인";
+  $("#modalCancel").hidden = true;
+  $("#modalBack").hidden = false;
+  $("#modalOk").focus();
+}
+function closeModal(){ $("#modalBack").hidden = true; modalOnOk = null; }
+
+function deleteCol(i){
+  if(S.cols.length <= 1){ notice("기둥은 최소 1개가 필요합니다."); return; }
+  const c = S.cols[i];
+  askConfirm("'" + (c.tag || "이름 없음") + "' 기둥과 면적 데이터를 삭제할까요?", function(){
+    S.cols.splice(i, 1);
+    S.active = Math.min(S.active, S.cols.length - 1);
+    rebuildViews();
+  }, "삭제");
+}
+
+/* 기둥부호 동기화: 칩·요약표·상세 컨트롤 */
+function syncTag(i){
+  const c = S.cols[i];
+  const chip = $("#chipBar").querySelector('.chip[data-i="' + i + '"]');
+  if(chip) chip.textContent = c.tag || "(이름 없음)";
+  const sumIn = $("#colBody").querySelector('tr[data-i="' + i + '"] input[data-k="tag"]');
+  if(sumIn && sumIn !== document.activeElement) sumIn.value = c.tag;
+  if(i === S.active){
+    if($("#storyTag") !== document.activeElement) $("#storyTag").value = c.tag;
+    $("#capTag").textContent = c.tag || "—";
+    $("#baseTag").textContent = c.tag || "—";
+  }
+}
+
+/* ================= 공통 ================= */
+let booted = false;   // 초기 렌더에는 반영 표시를 하지 않음
+function markApplied(){
+  if(!booted) return;
+  const el = $("#applyNote");
+  if(el) el.textContent = "✓ 일람표에 자동 반영됨 · " + new Date().toLocaleTimeString("ko-KR", { hour12:false });
+}
+function flashSummary(){
+  const cells = $("#colBody").querySelectorAll("td.calc");
+  cells.forEach(function(c){ c.classList.remove("flash"); });
+  void $("#colBody").offsetWidth;   // 애니메이션 재시작용 리플로우
+  cells.forEach(function(c){ c.classList.add("flash"); });
+  setTimeout(function(){ cells.forEach(function(c){ c.classList.remove("flash"); }); }, 1400);
+}
+function recalcAll(){ readCond(); recalcSummary(); recalcStory(); }
+function rebuildAll(){
+  $("#prjName").value = S.project.name;
+  $("#prjDate").value = S.project.date;
+  $("#prjAuthor").value = S.project.author;
+  $("#dlR").value = S.cond.dlR; $("#llR").value = S.cond.llR;
+  $("#dlF").value = S.cond.dlF; $("#llF").value = S.cond.llF;
+  $("#alpha").value = S.cond.alpha;
+  readCond();
+  rebuildViews();
+}
+
+/* ================= 이벤트 ================= */
+document.addEventListener("input", function(e){
+  const t = e.target;
+  if(t.closest("#colBody")){
+    const i = +t.closest("tr").dataset.i, k = t.dataset.k;
+    if(k === "tag"){ S.cols[i].tag = t.value; syncTag(i); }
+    else if(k === "note"){ S.cols[i].note = t.value; }
+  } else if(t.closest("#storyBody")){
+    const i = +t.closest("tr").dataset.i, k = t.dataset.k;
+    if(k === "name"){ S.floors[i].name = t.value; }
+    else if(k === "dl" || k === "ll"){ S.floors[i][k] = pf(t); }   // 층 공통 → 전 기둥 반영
+    else { activeCol().areas[i][k] = pf(t); }                       // 기둥별 면적
+    recalcStory(); recalcSummary();
+  } else if(["dlR","llR","dlF","llF","alpha"].indexOf(t.id) >= 0){
+    recalcAll();
+  } else if(t.id === "storyTag"){
+    activeCol().tag = t.value;
+    syncTag(S.active);
+  } else if(t.id === "genN"){
+    const N = Math.round(pf(t));
+    if(isFinite(N) && N >= 1 && N <= 200){
+      if(resizeBuilding(N, S.belowM)){ buildStoryRows(); recalcStory(); recalcSummary(); syncStoryCtl(); }
+    }
+  }
+  else if(t.id === "prjName"){ S.project.name = t.value; }
+  else if(t.id === "prjDate"){ S.project.date = t.value; }
+  else if(t.id === "prjAuthor"){ S.project.author = t.value; }
+});
+
+document.addEventListener("click", function(e){
+  const chip = e.target.closest(".chip");
+  if(chip && chip.closest("#chipBar")){
+    S.active = +chip.dataset.i;
+    renderChips(); refreshStory();
+    return;
+  }
+  if(e.target.closest("#btnAddStoryCol")){
+    addCol(activeCol());
+    $("#storyTag").focus(); $("#storyTag").select();
+    return;
+  }
+  const detail = e.target.closest(".detail");
+  if(detail){
+    S.active = +detail.closest("tr").dataset.i;
+    renderChips(); refreshStory(); selectTab("story");
+    return;
+  }
+  const del = e.target.closest(".del");
+  if(del){
+    const tr = del.closest("tr");
+    if(tr && tr.closest("#colBody")) deleteCol(+tr.dataset.i);
+  }
+});
+
+/* 확인 대화상자 이벤트 */
+$("#modalOk").addEventListener("click", function(){
+  const fn = modalOnOk; closeModal(); if(fn) fn();
+});
+$("#modalCancel").addEventListener("click", closeModal);
+$("#modalBack").addEventListener("click", function(e){ if(e.target === $("#modalBack")) closeModal(); });
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape" && !$("#modalBack").hidden) closeModal();
+});
+
+$("#btnDelStoryCol").addEventListener("click", function(){
+  deleteCol(S.active);
+});
+
+/* 아래층(1F, B1, B2 …) 추가·삭제 */
+$("#btnAddBelow").addEventListener("click", function(){
+  if(S.belowM >= 30){ notice("아래층은 최대 30개까지 추가할 수 있습니다."); return; }
+  if(resizeBuilding(S.aboveN, S.belowM + 1)){ buildStoryRows(); recalcStory(); recalcSummary(); syncStoryCtl(); }
+});
+$("#btnDelBelow").addEventListener("click", function(){
+  if(S.belowM <= 0) return;
+  if(resizeBuilding(S.aboveN, S.belowM - 1)){ buildStoryRows(); recalcStory(); recalcSummary(); syncStoryCtl(); }
+});
+
+$("#btnAddCol").addEventListener("click", function(){
+  addCol(S.cols[S.cols.length - 1]);
+  const row = $("#colBody").querySelector('tr[data-i="' + S.active + '"]');
+  if(row){ const inp = row.querySelector('input[data-k="tag"]'); inp.focus(); inp.select(); }
+});
+
+/* 탭 */
+function selectTab(which){
+  const isCols = which === "cols";
+  $("#tabCols").setAttribute("aria-selected", isCols);
+  $("#tabStory").setAttribute("aria-selected", !isCols);
+  $("#panelCols").classList.toggle("active", isCols);
+  $("#panelStory").classList.toggle("active", !isCols);
+  readCond();
+  if(isCols) recalcSummary(); else recalcStory();   // 표시 직전 최신화 (안전망)
+}
+$("#tabCols").addEventListener("click", function(){ selectTab("cols"); });
+$("#tabStory").addEventListener("click", function(){ selectTab("story"); });
+
+/* 적용하고 일람표 보기: 전체 재계산 → 일람표 이동 → 갱신 셀 하이라이트 */
+$("#btnApply").addEventListener("click", function(){
+  recalcAll();
+  selectTab("cols");
+  flashSummary();
+  const p = $("#panelCols");
+  if(typeof p.scrollIntoView === "function"){
+    try{ p.scrollIntoView({ behavior: "smooth", block: "start" }); }catch(_){}
+  }
+});
+
+/* 초기화 / 인쇄 / PDF */
+$("#btnReset").addEventListener("click", function(){
+  askConfirm("모든 입력을 지우고 예시 값으로 되돌립니다. 계속할까요?", function(){
+    S = exampleState(); rebuildAll();
+  }, "초기화");
+});
+$("#btnPrint").addEventListener("click", function(){ window.print(); });
+
+/* PDF로 저장: 일람표·층별 상세를 모두 포함한 A4 가로 PDF 파일 생성 */
+$("#btnPdf").addEventListener("click", async function(){
+  if(!(window.html2canvas && window.jspdf && window.jspdf.jsPDF)){
+    notice("PDF 모듈을 불러오지 못했습니다(오프라인 등). [계산서 인쇄] 버튼을 누른 뒤 대상 프린터를 'PDF로 저장'으로 선택해도 동일한 PDF를 얻을 수 있습니다.");
+    return;
+  }
+  const btn = $("#btnPdf");
+  btn.disabled = true;
+  const orig = btn.textContent;
+  btn.textContent = "PDF 생성 중…";
+  document.body.classList.add("pdf-mode");
+  try{
+    recalcAll();
+    await new Promise(function(r){ setTimeout(r, 80); });   // 레이아웃 반영 대기
+    const canvas = await window.html2canvas($(".sheet"), {
+      scale: 2, backgroundColor: "#FFFFFF",
+      scrollX: 0, scrollY: -window.scrollY, windowWidth: 1240
+    });
+    const jsPDF = window.jspdf.jsPDF;
+    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const margin = 8, pageW = 297, pageH = 210;
+    const imgW = pageW - margin * 2;
+    const perPagePx = Math.floor(canvas.width * (pageH - margin * 2) / imgW);
+    for(let p = 0; p * perPagePx < canvas.height; p++){
+      const h = Math.min(perPagePx, canvas.height - p * perPagePx);
+      const slice = document.createElement("canvas");
+      slice.width = canvas.width;
+      slice.height = h;
+      slice.getContext("2d").drawImage(canvas, 0, p * perPagePx, canvas.width, h, 0, 0, canvas.width, h);
+      if(p > 0) pdf.addPage();
+      pdf.addImage(slice.toDataURL("image/jpeg", 0.92), "JPEG", margin, margin, imgW, h * imgW / canvas.width);
+    }
+    pdf.save("기둥축력계산서_" + todayISO() + ".pdf");
+  }catch(err){
+    notice("PDF 생성 중 오류가 발생했습니다. [계산서 인쇄]에서 'PDF로 저장'을 이용해 주세요.");
+  }finally{
+    document.body.classList.remove("pdf-mode");
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+});
+
+/* 엑셀로 저장: 일람표 + 전 기둥 층별 상세 (2개 시트) */
+$("#btnXlsx").addEventListener("click", function(){
+  if(!window.XLSX){
+    notice("엑셀 모듈을 불러오지 못했습니다(오프라인 등). 인터넷 연결 상태를 확인한 뒤 다시 시도해 주세요.");
+    return;
+  }
+  readCond();
+  const r1 = function(v){ return v == null ? "" : Math.round(v * 10) / 10; };
+  const r2 = function(v){ return v == null ? "" : Math.round(v * 100) / 100; };
+  const wb = XLSX.utils.book_new();
+
+  // 시트 1: 기둥축력 일람표
+  const aoa1 = [
+    ["기둥 축력 계산서", "", "프로젝트", S.project.name, "작성일", S.project.date, "작성자", S.project.author],
+    ["자중할증계수 α", S.cond.alpha, "단위", "kN, kN/m², m"],
+    [],
+    ["기둥부호","가로×세로 (m)","분담면적 A (m²)","지지층수 n","고정하중 ΣD (kN)","활하중 ΣL (kN)","사용하중 ΣD+ΣL (kN)","계수하중 1.2ΣD+1.6ΣL (kN)","1.4ΣD (kN)","비고"]
+  ];
+  let sD = 0, sL = 0;
+  S.cols.forEach(function(c){
+    const st = areaStats(c.areas);
+    const sm = summarizeCol(S.floors, c.areas, S.cond.alpha);
+    const dims = st.any ? (st.uniform ? st.lx + " × " + st.ly : "층별 상이") : "";
+    const aTxt = st.any ? (st.minA === st.maxA ? r2(st.minA) : r2(st.minA) + " ~ " + r2(st.maxA)) : "";
+    const note = (c.note || "") + (sm && sm.dirty ? " (미입력 있음)" : "");
+    if(sm && !sm.dirty){ sD += sm.D; sL += sm.L; }
+    aoa1.push([c.tag, dims, aTxt, sm ? sm.n : "", sm ? r1(sm.D) : "", sm ? r1(sm.L) : "",
+               sm ? r1(sm.P) : "", sm ? r1(sm.Pu) : "", sm ? r1(sm.Pu14) : "", note]);
+  });
+  aoa1.push(["합계","","","", r1(sD), r1(sL), r1(sD + sL), r1(1.2 * sD + 1.6 * sL), "", "전체 중력하중(기초설계 참고) · 미입력 기둥 제외"]);
+  const ws1 = XLSX.utils.aoa_to_sheet(aoa1);
+  ws1["!cols"] = [{wch:10},{wch:14},{wch:16},{wch:10},{wch:16},{wch:15},{wch:19},{wch:23},{wch:12},{wch:34}];
+  XLSX.utils.book_append_sheet(wb, ws1, "기둥축력일람표");
+
+  // 시트 2: 층별 상세계산 (전 기둥)
+  const aoa2 = [
+    ["층별 상세계산", "", "자중할증계수 α", S.cond.alpha, "", "층별 D = A×DL · ΣD = ΣD(상부)+α×D · ΣL = ΣL(상부)+L"],
+    []
+  ];
+  S.cols.forEach(function(c){
+    aoa2.push(["기둥 " + (c.tag || "") + (c.note ? " — " + c.note : "")]);
+    aoa2.push(["슬래브 레벨","가로 Lx (m)","세로 Ly (m)","분담면적 A (m²)","DL (kN/m²)","LL (kN/m²)","층별 D (kN)","층별 L (kN)","누적 ΣD (kN)","누적 ΣL (kN)","사용하중 (kN)","계수하중 (kN)","해당 기둥"]);
+    const res = calcStory(S.floors, c.areas, S.cond.alpha, S.aboveN);
+    res.forEach(function(r, i){
+      const fl = S.floors[i], ar = c.areas[i] || {};
+      aoa2.push([
+        fl.name,
+        isNum(ar.lx) ? ar.lx : "", isNum(ar.ly) ? ar.ly : "",
+        r.supported ? r2(r.A) : (r.ok ? "미지지" : "미입력"),
+        isNum(fl.dl) ? fl.dl : "", isNum(fl.ll) ? fl.ll : "",
+        r.supported ? r1(r.d) : "", r.supported ? r1(r.l) : "",
+        r1(r.SD), r1(r.SL), r1(r.P), r1(r.Pu),
+        r.supCount === 0 ? "—" : r.label
+      ]);
+    });
+    aoa2.push([]);
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(aoa2);
+  ws2["!cols"] = [{wch:11},{wch:11},{wch:11},{wch:14},{wch:11},{wch:11},{wch:11},{wch:11},{wch:12},{wch:12},{wch:12},{wch:14},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws2, "층별상세계산");
+
+  XLSX.writeFile(wb, "기둥축력계산서_" + todayISO() + ".xlsx");
+});
+
+/* 초기 렌더 */
+rebuildAll();
+booted = true;
+</script>
+</body>
+</html>
