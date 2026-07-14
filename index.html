@@ -370,7 +370,7 @@ body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
     <button type="button" id="btnXlsx">엑셀로 저장</button>
     <label class="chk" for="chkStory"><input type="checkbox" id="chkStory" checked> 출력물에 층별 상세계산 포함</label>
     <div class="spacer"></div>
-    <span class="ver">v1.5</span>
+    <span class="ver">v1.6</span>
     <button type="button" id="btnReset" class="ghost">예시로 초기화</button>
   </div>
 
@@ -529,7 +529,7 @@ body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
       <div class="print-only" id="printStories"></div>
 
       <div class="stamp" role="status" aria-label="기초 전달하중">
-        <span class="k">기초 전달하중<b id="baseTag">C1</b><span id="baseStory">1층 기둥</span></span>
+        <span class="k"><b id="baseTag">C1</b><span id="baseStory">1층 기둥</span></span>
         <span class="v"><b>Ps = <span id="baseP">—</span> kN</b><b>Pu = <span id="basePu">—</span> kN</b></span>
       </div>
 
@@ -563,7 +563,7 @@ body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
   </div>
 
   <footer class="foot">
-    <span>COLUMN AXIAL LOAD CALCULATION SHEET · V1.5</span>
+    <span>COLUMN AXIAL LOAD CALCULATION SHEET · V1.6</span>
     <span>REF. KDS 41 10 15 · <b style="color:var(--ink);font-weight:600">made by KSN</b></span>
   </footer>
 </div>
@@ -1007,7 +1007,7 @@ function buildPrintStories(){
     html += '<div class="ps-block">' +
       '<div class="ps-cap"><b>' + esc(c.tag || "—") + '</b>' +
       (c.note ? '<span class="ps-note">' + esc(c.note) + '</span>' : '') +
-      '<span class="ps-base">기초 전달 Ps = ' + f1(last ? last.P : null) + ' kN · Pu = ' + f1(last ? last.Pu : null) + ' kN</span></div>' +
+      '<span class="ps-base">Ps = ' + f1(last ? last.P : null) + ' kN · Pu = ' + f1(last ? last.Pu : null) + ' kN</span></div>' +
       '<table class="ps-table"><thead><tr>' +
       heads.map(function(h){ return "<th>" + h + "</th>"; }).join("") +
       "</tr></thead><tbody>";
