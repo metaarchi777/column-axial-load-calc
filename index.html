@@ -316,16 +316,6 @@ body.outmode .ps-cap{font-size:9.5px;margin:8px 0 4px}
 body.outmode .ps-cap .ps-note{font-size:8px}
 body.outmode .ps-cap .ps-base{font-size:8.5px}
 body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
-/* ── PDF 저장 모드: 인쇄 레이아웃과 동일하게 캡처 ── */
-body.pdf-mode{background:#fff;background-image:none;padding:0}
-body.pdf-mode .sheet{width:794px;max-width:none;box-shadow:none;margin:0}
-body.pdf-mode .no-print{display:none!important}
-body.pdf-mode .panel{display:block!important;border:none;padding:8px 0 0}
-body.pdf-mode .panel + .panel{margin-top:14px}
-body.pdf-mode input{border-color:transparent!important;background:transparent!important;box-shadow:none!important}
-body.pdf-mode .twrap{overflow:visible}
-body.pdf-mode .notes-block{display:none}
-body.pdf-mode.no-story #panelStory{display:none!important}
 /* ── 인쇄: 계산서 출력 ────────────────────────────── */
 @page{size:A4;margin:10mm}
 @media print{
@@ -376,12 +366,11 @@ body.pdf-mode.no-story #panelStory{display:none!important}
 
   <!-- 툴바 -->
   <div class="toolbar no-print">
-    <button type="button" id="btnPdf" class="primary">PDF로 저장</button>
-    <button type="button" id="btnPrint">계산서 인쇄</button>
+    <button type="button" id="btnPrint" class="primary">계산서 인쇄</button>
     <button type="button" id="btnXlsx">엑셀로 저장</button>
     <label class="chk" for="chkStory"><input type="checkbox" id="chkStory" checked> 출력물에 층별 상세계산 포함</label>
     <div class="spacer"></div>
-    <span class="ver">v1.4 · 선명 출력</span>
+    <span class="ver">v1.5</span>
     <button type="button" id="btnReset" class="ghost">예시로 초기화</button>
   </div>
 
@@ -541,7 +530,7 @@ body.pdf-mode.no-story #panelStory{display:none!important}
 
       <div class="stamp" role="status" aria-label="기초 전달하중">
         <span class="k">기초 전달하중<b id="baseTag">C1</b><span id="baseStory">1층 기둥</span></span>
-        <span class="v"><b>P = <span id="baseP">—</span> kN</b><b>Pu = <span id="basePu">—</span> kN</b></span>
+        <span class="v"><b>Ps = <span id="baseP">—</span> kN</b><b>Pu = <span id="basePu">—</span> kN</b></span>
       </div>
 
       <div class="rowbar no-print" style="margin-top:14px">
@@ -566,7 +555,7 @@ body.pdf-mode.no-story #panelStory{display:none!important}
         <li>층별 상세계산의 각 행 누적축력은 해당 슬래브 레벨 직하부 기둥의 축력이며, 마지막 행이 최하층 기둥(기초 전달하중)이다.</li>
         <li>지상 층수 N 입력과 [아래층 추가/삭제]에 따라 슬래브 레벨이 자동 생성·삭제되며, 남는 층의 입력값(하중·면적)은 유지된다. 삭제한 층은 다시 추가하면 입력값이 복원된다.</li>
         <li>하중조합·설계하중은 KDS 41 10 15(건축구조기준 설계하중)에 따른다. 단위: kN (1 kN ≈ 0.102 tonf). 지하층 흙·수압, 벽체 자중 등은 별도 고려한다.</li>
-        <li>입력값은 브라우저에 저장되지 않는다. 보관이 필요하면 [PDF로 저장]·[엑셀로 저장] 버튼을 이용하거나, [계산서 인쇄]에서 'PDF로 저장'을 선택한다. 03 NOTES는 화면 참고용으로만 표시되며 출력물(PDF·인쇄)에는 포함되지 않는다. 출력물은 A4 세로 방향이며, 층별 상세계산은 모든 기둥이 포함되며, 툴바의 '출력물에 층별 상세계산 포함' 체크를 해제하면 일람표까지만 출력된다. 분량이 한 페이지를 넘으면 [표지·조건·일람표]와 [층별 상세계산] 페이지가 구분되고, 기둥 블록은 페이지 중간에서 잘리지 않는다.</li>
+        <li>입력값은 브라우저에 저장되지 않는다. 보관이 필요하면 [계산서 인쇄]에서 대상 프린터를 'PDF로 저장'으로 선택하거나 [엑셀로 저장]을 이용한다. 03 NOTES는 화면 참고용으로만 표시되며 출력물(PDF·인쇄)에는 포함되지 않는다. 출력물은 A4 세로 방향이며, 층별 상세계산은 모든 기둥이 포함되며, 툴바의 '출력물에 층별 상세계산 포함' 체크를 해제하면 일람표까지만 출력된다. 분량이 한 페이지를 넘으면 [표지·조건·일람표]와 [층별 상세계산] 페이지가 구분되고, 기둥 블록은 페이지 중간에서 잘리지 않는다.</li>
         <li>본 도구는 예비설계용 중력 축력 산정 도구이며, 최종 설계는 구조해석 결과로 검증한다.</li>
       </ol>
     </section>
@@ -574,7 +563,7 @@ body.pdf-mode.no-story #panelStory{display:none!important}
   </div>
 
   <footer class="foot">
-    <span>COLUMN AXIAL LOAD CALCULATION SHEET · V1.4</span>
+    <span>COLUMN AXIAL LOAD CALCULATION SHEET · V1.5</span>
     <span>REF. KDS 41 10 15 · <b style="color:var(--ink);font-weight:600">made by KSN</b></span>
   </footer>
 </div>
@@ -591,8 +580,6 @@ body.pdf-mode.no-story #panelStory{display:none!important}
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 "use strict";
@@ -1020,7 +1007,7 @@ function buildPrintStories(){
     html += '<div class="ps-block">' +
       '<div class="ps-cap"><b>' + esc(c.tag || "—") + '</b>' +
       (c.note ? '<span class="ps-note">' + esc(c.note) + '</span>' : '') +
-      '<span class="ps-base">기초 전달 P = ' + f1(last ? last.P : null) + ' kN · Pu = ' + f1(last ? last.Pu : null) + ' kN</span></div>' +
+      '<span class="ps-base">기초 전달 Ps = ' + f1(last ? last.P : null) + ' kN · Pu = ' + f1(last ? last.Pu : null) + ' kN</span></div>' +
       '<table class="ps-table"><thead><tr>' +
       heads.map(function(h){ return "<th>" + h + "</th>"; }).join("") +
       "</tr></thead><tbody>";
@@ -1184,103 +1171,7 @@ $("#btnPrint").addEventListener("click", function(){
   setTimeout(function(){ document.body.classList.remove("outmode"); }, 800);   // afterprint 미발생 환경 대비
 });
 
-/* PDF로 저장: A4 세로 · 가능하면 1페이지, 넘치면 [일람표]와 [층별 상세(전 기둥)]를 페이지로 구분 */
-$("#btnPdf").addEventListener("click", async function(){
-  if(!(window.html2canvas && window.jspdf && window.jspdf.jsPDF)){
-    notice("PDF 모듈을 불러오지 못했습니다(오프라인 등). [계산서 인쇄] 버튼을 누른 뒤 대상 프린터를 'PDF로 저장'으로 선택해도 동일한 PDF를 얻을 수 있습니다.");
-    return;
-  }
-  const btn = $("#btnPdf");
-  btn.disabled = true;
-  const orig = btn.textContent;
-  btn.textContent = "PDF 생성 중…";
-  document.body.classList.add("pdf-mode");
-  document.body.classList.add("outmode");
-  try{
-    recalcAll();
-    buildPrintStories();
-    await new Promise(function(r){ setTimeout(r, 80); });   // 레이아웃 반영 대기
-    const sheet = $(".sheet");
-    const canvas = await window.html2canvas(sheet, {
-      scale: 3, backgroundColor: "#FFFFFF",
-      scrollX: 0, scrollY: -window.scrollY, windowWidth: 860,
-      onclone: function(cd){
-        /* html2canvas가 input 텍스트를 잘라 그리는 문제 회피:
-           캡처용 복제 문서에서 입력칸을 동일 서식의 일반 텍스트로 치환 */
-        const src = document.querySelectorAll(".sheet input");
-        const dst = cd.querySelectorAll(".sheet input");
-        dst.forEach(function(inp, i){
-          const o = src[i];
-          if(!o || o.type === "checkbox" || o.type === "radio") return;
-          const cs = window.getComputedStyle(o);
-          const d = cd.createElement("div");
-          d.textContent = o.value;
-          d.style.cssText = "box-sizing:border-box;width:100%;white-space:nowrap;overflow:visible;line-height:1.35;" +
-            "font-family:" + cs.fontFamily + ";font-size:" + cs.fontSize +
-            ";font-weight:" + cs.fontWeight + ";color:" + cs.color +
-            ";text-align:" + cs.textAlign + ";padding:" + cs.padding + ";";
-          inp.parentNode.replaceChild(d, inp);
-        });
-      }
-    });
-    const rect = sheet.getBoundingClientRect();
-    const k = canvas.width / rect.width;
-    const yTop = function(el){ return Math.max(0, (el.getBoundingClientRect().top - rect.top) * k); };
-    const yBot = function(el){ return Math.min(canvas.height, (el.getBoundingClientRect().bottom - rect.top) * k); };
 
-    const jsPDF = window.jspdf.jsPDF;
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const margin = 8, pageW = 210, pageH = 297;
-    const imgW = pageW - margin * 2;
-    const pagePx = canvas.width * (pageH - margin * 2) / imgW;
-
-    /* 페이지 구간 산정: 전체가 1페이지에 들어가면 통짜,
-       넘치면 [표지·조건·일람표] 페이지 → 기둥 블록 단위로 페이지 구성 (블록은 중간에서 자르지 않음) */
-    const ranges = [];
-    const blocks = document.body.classList.contains("no-story") ? [] :
-      Array.prototype.slice.call(document.querySelectorAll("#printStories .ps-block"));
-    const foot = $(".foot");
-    if(canvas.height <= pagePx || blocks.length === 0){
-      for(let y = 0; y < canvas.height; y += pagePx){
-        ranges.push([y, Math.min(y + pagePx, canvas.height)]);
-      }
-    } else {
-      const storyStart = yTop(blocks[0]);
-      for(let y = 0; y < storyStart; y += pagePx){
-        ranges.push([y, Math.min(y + pagePx, storyStart)]);
-      }
-      const segs = blocks.map(function(b){ return [yTop(b), yBot(b)]; });
-      segs.push([yTop(foot), yBot(foot)]);                  // 푸터는 마지막 페이지에 이어붙임
-      let a = null, b = null;
-      const flush = function(){ if(a !== null && b > a + 1) ranges.push([a, b]); };
-      segs.forEach(function(s){
-        if(a === null){ a = s[0]; b = s[1]; }
-        else if(s[1] - a <= pagePx){ b = s[1]; }
-        else { flush(); a = s[0]; b = s[1]; }
-        while(b - a > pagePx){ ranges.push([a, a + pagePx]); a += pagePx; }   // 블록 하나가 한 페이지보다 큰 경우
-      });
-      flush();
-    }
-
-    ranges.forEach(function(rg, p){
-      const h = Math.max(1, Math.round(rg[1] - rg[0]));
-      const slice = document.createElement("canvas");
-      slice.width = canvas.width;
-      slice.height = h;
-      slice.getContext("2d").drawImage(canvas, 0, Math.round(rg[0]), canvas.width, h, 0, 0, canvas.width, h);
-      if(p > 0) pdf.addPage();
-      pdf.addImage(slice.toDataURL("image/png"), "PNG", margin, margin, imgW, h * imgW / canvas.width);
-    });
-    pdf.save("기둥축력계산서_" + todayISO() + ".pdf");
-  }catch(err){
-    notice("PDF 생성 중 오류가 발생했습니다. [계산서 인쇄]에서 'PDF로 저장'을 이용해 주세요.");
-  }finally{
-    document.body.classList.remove("pdf-mode");
-    document.body.classList.remove("outmode");
-    btn.disabled = false;
-    btn.textContent = orig;
-  }
-});
 
 /* 출력물에 층별 상세계산 포함 여부 (기본: 포함) */
 $("#chkStory").addEventListener("change", function(){
