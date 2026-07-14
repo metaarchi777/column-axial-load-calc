@@ -370,7 +370,7 @@ body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
     <button type="button" id="btnXlsx">엑셀로 저장</button>
     <label class="chk" for="chkStory"><input type="checkbox" id="chkStory" checked> 출력물에 층별 상세계산 포함</label>
     <div class="spacer"></div>
-    <span class="ver">v1.6</span>
+    <span class="ver">v1.8</span>
     <button type="button" id="btnReset" class="ghost">예시로 초기화</button>
   </div>
 
@@ -429,7 +429,7 @@ body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
     <section class="panel active" id="panelCols" role="tabpanel" aria-labelledby="tabCols">
       <div class="panel-cap">
         <h2>2.1 기둥축력 일람표</h2>
-        <span class="formula">층별 상세계산에 정의된 기둥의 최하층 기둥(기초 전달) 축력 요약 — ΣD는 α 반영</span>
+        <span class="formula">층별 상세계산에 정의된 기둥의 최하층 기둥(기초 전달) 축력 요약 — D는 α 반영</span>
       </div>
       <div class="twrap">
         <table id="colTable">
@@ -439,10 +439,10 @@ body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
               <th>가로 × 세로<span class="u">m</span></th>
               <th>분담면적 A<span class="u">m²</span></th>
               <th>지지층수 n<span class="u">개층</span></th>
-              <th>고정하중 ΣD<span class="u">kN</span></th>
-              <th>활하중 ΣL<span class="u">kN</span></th>
-              <th>사용하중 ΣD+ΣL<span class="u">kN</span></th>
-              <th>계수하중 1.2ΣD+1.6ΣL<span class="u">kN</span></th>
+              <th>고정하중 D<span class="u">kN</span></th>
+              <th>활하중 L<span class="u">kN</span></th>
+              <th>사용하중 D+L<span class="u">kN</span></th>
+              <th>계수하중 1.2D+1.6L<span class="u">kN</span></th>
               <th>비고</th>
               <th class="no-print" aria-label="상세·삭제"></th>
             </tr>
@@ -471,7 +471,7 @@ body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
     <section class="panel" id="panelStory" role="tabpanel" aria-labelledby="tabStory">
       <div class="panel-cap">
         <h2>2.2 층별 상세계산<span class="cap-live" style="font-weight:400"> — <span id="capTag" style="font-family:var(--mono);font-weight:700">C1</span></span></h2>
-        <span class="formula">층별 D = A·DL&ensp;·&ensp;ΣD = ΣD<sub>상부</sub>+α·D&ensp;·&ensp;ΣL = ΣL<sub>상부</sub>+L</span>
+        <span class="formula">층별 D = A·DL&ensp;·&ensp;층별 L = A·LL&ensp;·&ensp;누적값 = 상부 층 합산 (고정하중에 α 반영)</span>
       </div>
 
       <div class="story-ctl no-print">
@@ -508,10 +508,10 @@ body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
               <th class="fl">LL<span class="u">kN/m² · 층 공통</span></th>
               <th>층별 D<span class="u">kN</span></th>
               <th>층별 L<span class="u">kN</span></th>
-              <th>누적 ΣD<span class="u">kN</span></th>
-              <th>누적 ΣL<span class="u">kN</span></th>
-              <th>사용하중 ΣD+ΣL<span class="u">kN</span></th>
-              <th>계수하중 1.2ΣD+1.6ΣL<span class="u">kN</span></th>
+              <th>층별 D+L<span class="u">kN</span></th>
+              <th>층별 1.2D+1.6L<span class="u">kN</span></th>
+              <th>누적 D+L<span class="u">kN</span></th>
+              <th>누적 1.2D+1.6L<span class="u">kN</span></th>
               <th>해당 기둥</th>
             </tr>
           </thead>
@@ -563,7 +563,7 @@ body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
   </div>
 
   <footer class="foot">
-    <span>COLUMN AXIAL LOAD CALCULATION SHEET · V1.6</span>
+    <span>COLUMN AXIAL LOAD CALCULATION SHEET · V1.8</span>
     <span>REF. KDS 41 10 15 · <b style="color:var(--ink);font-weight:600">made by KSN</b></span>
   </footer>
 </div>
@@ -876,8 +876,8 @@ function buildStoryRows(){
       '<td class="fl" style="width:80px"><input class="num" data-k="ll" type="number" step="0.1" min="0" value="' + numv(fl.ll) + '" aria-label="LL"></td>' +
       '<td class="calc" data-o="d">—</td>' +
       '<td class="calc" data-o="l">—</td>' +
-      '<td class="calc" data-o="SD">—</td>' +
-      '<td class="calc" data-o="SL">—</td>' +
+      '<td class="calc" data-o="fp">—</td>' +
+      '<td class="calc" data-o="fpu">—</td>' +
       '<td class="calc" data-o="P">—</td>' +
       '<td class="calc" data-o="Pu">—</td>' +
       '<td class="calc" data-o="label" style="font-family:var(--sans);font-size:12px">—</td>';
@@ -894,12 +894,12 @@ function recalcStory(){
     cell("A").innerHTML = r.supported ? f2(r.A) : (r.ok ? '<span class="sub">미지지</span>' : "—");
     cell("d").textContent = r.supported ? f1(r.d) : "—";
     cell("l").textContent = r.supported ? f1(r.l) : "—";
-    cell("SD").textContent = f1(r.SD);
-    cell("SL").textContent = f1(r.SL);
+    cell("fp").textContent  = r.supported ? f1(r.d + r.l) : "—";
+    cell("fpu").textContent = r.supported ? f1(1.2 * r.d + 1.6 * r.l) : "—";
     cell("P").textContent  = f1(r.P);
     cell("Pu").textContent = f1(r.Pu);
     cell("label").textContent = r.supCount === 0 ? "— (미지지 구간)" : r.label;
-    ["SD","SL","P","Pu"].forEach(function(k){
+    ["P","Pu"].forEach(function(k){
       cell(k).classList.toggle("dirty", r.dirty);
     });
     if(!r.ok) dirty = true;
@@ -999,7 +999,7 @@ function buildPrintStories(){
   const box = $("#printStories");
   if(!box) return;
   const heads = ["슬래브 레벨","가로 Lx (m)","세로 Ly (m)","분담면적 A (m²)","DL (kN/m²)","LL (kN/m²)",
-                 "층별 D (kN)","층별 L (kN)","누적 ΣD (kN)","누적 ΣL (kN)","사용하중 (kN)","계수하중 (kN)","해당 기둥"];
+                 "층별 D (kN)","층별 L (kN)","층별 D+L (kN)","층별 1.2D+1.6L (kN)","누적 D+L (kN)","누적 1.2D+1.6L (kN)","해당 기둥"];
   let html = "";
   S.cols.forEach(function(c){
     const res = calcStory(S.floors, c.areas, S.cond.alpha, S.aboveN);
@@ -1022,7 +1022,9 @@ function buildPrintStories(){
         isNum(fl.ll) ? fd(fl.ll) : "—",
         r.supported ? f1(r.d) : "—",
         r.supported ? f1(r.l) : "—",
-        f1(r.SD), f1(r.SL), f1(r.P), f1(r.Pu),
+        r.supported ? f1(r.d + r.l) : "—",
+        r.supported ? f1(1.2 * r.d + 1.6 * r.l) : "—",
+        f1(r.P), f1(r.Pu),
         r.supCount === 0 ? "—" : r.label
       ].map(function(v){ return '<td class="calc">' + v + "</td>"; }).join("") + "</tr>";
     });
@@ -1194,7 +1196,7 @@ $("#btnXlsx").addEventListener("click", function(){
     ["기둥 축력 계산서", "", "프로젝트", S.project.name, "작성일", S.project.date, "작성자", S.project.author],
     ["자중할증계수 α", S.cond.alpha, "단위", "kN, kN/m², m"],
     [],
-    ["기둥부호","가로×세로 (m)","분담면적 A (m²)","지지층수 n","고정하중 ΣD (kN)","활하중 ΣL (kN)","사용하중 ΣD+ΣL (kN)","계수하중 1.2ΣD+1.6ΣL (kN)","1.4ΣD (kN)","비고"]
+    ["기둥부호","가로×세로 (m)","분담면적 A (m²)","지지층수 n","고정하중 D (kN)","활하중 L (kN)","사용하중 D+L (kN)","계수하중 1.2D+1.6L (kN)","1.4D (kN)","비고"]
   ];
   let sD = 0, sL = 0;
   S.cols.forEach(function(c){
@@ -1214,12 +1216,12 @@ $("#btnXlsx").addEventListener("click", function(){
 
   // 시트 2: 층별 상세계산 (전 기둥)
   const aoa2 = [
-    ["층별 상세계산", "", "자중할증계수 α", S.cond.alpha, "", "층별 D = A×DL · ΣD = ΣD(상부)+α×D · ΣL = ΣL(상부)+L"],
+    ["층별 상세계산", "", "자중할증계수 α", S.cond.alpha, "", "층별 D = A×DL · 층별 L = A×LL · 누적값 = 상부 층 합산 (고정하중에 α 반영)"],
     []
   ];
   S.cols.forEach(function(c){
     aoa2.push(["기둥 " + (c.tag || "") + (c.note ? " — " + c.note : "")]);
-    aoa2.push(["슬래브 레벨","가로 Lx (m)","세로 Ly (m)","분담면적 A (m²)","DL (kN/m²)","LL (kN/m²)","층별 D (kN)","층별 L (kN)","누적 ΣD (kN)","누적 ΣL (kN)","사용하중 (kN)","계수하중 (kN)","해당 기둥"]);
+    aoa2.push(["슬래브 레벨","가로 Lx (m)","세로 Ly (m)","분담면적 A (m²)","DL (kN/m²)","LL (kN/m²)","층별 D (kN)","층별 L (kN)","층별 D+L (kN)","층별 1.2D+1.6L (kN)","누적 D+L (kN)","누적 1.2D+1.6L (kN)","해당 기둥"]);
     const res = calcStory(S.floors, c.areas, S.cond.alpha, S.aboveN);
     res.forEach(function(r, i){
       const fl = S.floors[i], ar = c.areas[i] || {};
@@ -1229,7 +1231,8 @@ $("#btnXlsx").addEventListener("click", function(){
         r.supported ? r2(r.A) : (r.ok ? "미지지" : "미입력"),
         isNum(fl.dl) ? fl.dl : "", isNum(fl.ll) ? fl.ll : "",
         r.supported ? r1(r.d) : "", r.supported ? r1(r.l) : "",
-        r1(r.SD), r1(r.SL), r1(r.P), r1(r.Pu),
+        r.supported ? r1(r.d + r.l) : "", r.supported ? r1(1.2 * r.d + 1.6 * r.l) : "",
+        r1(r.P), r1(r.Pu),
         r.supCount === 0 ? "—" : r.label
       ]);
     });
