@@ -370,7 +370,7 @@ body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
     <button type="button" id="btnXlsx">엑셀로 저장</button>
     <label class="chk" for="chkStory"><input type="checkbox" id="chkStory" checked> 출력물에 층별 상세계산 포함</label>
     <div class="spacer"></div>
-    <span class="ver">v1.8</span>
+    <span class="ver">v1.9</span>
     <button type="button" id="btnReset" class="ghost">예시로 초기화</button>
   </div>
 
@@ -471,7 +471,7 @@ body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
     <section class="panel" id="panelStory" role="tabpanel" aria-labelledby="tabStory">
       <div class="panel-cap">
         <h2>2.2 층별 상세계산<span class="cap-live" style="font-weight:400"> — <span id="capTag" style="font-family:var(--mono);font-weight:700">C1</span></span></h2>
-        <span class="formula">층별 D = A·DL&ensp;·&ensp;층별 L = A·LL&ensp;·&ensp;누적값 = 상부 층 합산 (고정하중에 α 반영)</span>
+        <span class="formula">층별 D = α·A·DL&ensp;·&ensp;층별 L = A·LL&ensp;·&ensp;누적값 = 층별 값의 상부 층 합산</span>
       </div>
 
       <div class="story-ctl no-print">
@@ -549,7 +549,7 @@ body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
         <li>[아래층 추가]로 1F 이하 슬래브를 1F → B1 → B2 … 순서로 추가할 수 있다. 1F 슬래브는 지하 1층(B1) 기둥에, B(k) 슬래브는 B(k+1) 기둥에 재하되며, 최하층 바닥은 온통기초·토간 슬래브로 보아 기초로 직접 전달되므로 목록에서 제외한다.</li>
         <li>아래층이 없는 경우 1F 바닥은 토간 슬래브로 보아 기둥 재하에서 제외하며, 최하 기둥은 1층 기둥이다. 아래층이 있으면 최하 기둥은 B층 기둥(예: B1까지 추가 시 B2층 기둥)이다.</li>
         <li>기둥이 지지하지 않는 층은 해당 층의 면적을 0으로 입력한다(예: 저층부 기둥). 지지층수 n은 면적이 0보다 큰 층의 수로 자동 산정된다.</li>
-        <li>자중할증계수 α는 기둥 자중 등을 반영하기 위해 고정하중 D에만 곱한다(통상 1.00~1.10).</li>
+        <li>자중할증계수 α는 기둥 자중 등을 반영하기 위해 고정하중에만 곱하며, 층별 D = α·A·DL로 층별 값부터 반영된다(통상 1.00~1.10).</li>
         <li>활하중 저감은 적용하지 않았다(안전측). 영향면적 36 m² 이상인 경우 KDS 41 10 15 4.7에 따라 저감할 수 있다.</li>
         <li>활하중이 매우 작은 경우(대략 L/D &lt; 0.125) 1.4D 조합이 지배할 수 있으며, 해당 기둥에는 표에 <b style="color:var(--red)">1.4D 지배</b>로 표시된다.</li>
         <li>층별 상세계산의 각 행 누적축력은 해당 슬래브 레벨 직하부 기둥의 축력이며, 마지막 행이 최하층 기둥(기초 전달하중)이다.</li>
@@ -563,7 +563,7 @@ body.outmode .foot{font-size:8px;padding:6px 14px;letter-spacing:.05em}
   </div>
 
   <footer class="foot">
-    <span>COLUMN AXIAL LOAD CALCULATION SHEET · V1.8</span>
+    <span>COLUMN AXIAL LOAD CALCULATION SHEET · V1.9</span>
     <span>REF. KDS 41 10 15 · <b style="color:var(--ink);font-weight:600">made by KSN</b></span>
   </footer>
 </div>
@@ -606,9 +606,9 @@ function calcStory(floors, areas, alpha, aboveN){
             && ar.lx >= 0 && ar.ly >= 0 && fl.dl >= 0 && fl.ll >= 0 && isNum(alpha);
     const supported = ok && ar.lx > 0 && ar.ly > 0;
     let A = null, d = 0, l = 0;
-    if(supported){ A = ar.lx * ar.ly; d = A * fl.dl; l = A * fl.ll; supCount++; }
+    if(supported){ A = ar.lx * ar.ly; d = alpha * A * fl.dl; l = A * fl.ll; supCount++; }
     else if(!ok){ anyIncomplete = true; }
-    SD += alpha * d;  SL += l;
+    SD += d;  SL += l;
     return {
       ok: ok, supported: supported, A: A,
       d: supported ? d : null, l: supported ? l : null,
@@ -1216,7 +1216,7 @@ $("#btnXlsx").addEventListener("click", function(){
 
   // 시트 2: 층별 상세계산 (전 기둥)
   const aoa2 = [
-    ["층별 상세계산", "", "자중할증계수 α", S.cond.alpha, "", "층별 D = A×DL · 층별 L = A×LL · 누적값 = 상부 층 합산 (고정하중에 α 반영)"],
+    ["층별 상세계산", "", "자중할증계수 α", S.cond.alpha, "", "층별 D = α×A×DL · 층별 L = A×LL · 누적값 = 층별 값의 상부 합산"],
     []
   ];
   S.cols.forEach(function(c){
